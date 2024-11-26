@@ -10,3 +10,6 @@ A web application to save and organize your favorite web resources with tags and
 - Next.js
 - Firebase
 - Tailwind CSS
+
+> [!NOTE]
+> If you want to use pnpm instead of npm, make sure to delete the package-lock.json file and the node_modules directory. Then, run pnpm install to install the dependencies. If you're migrating from npm or yarn and have a lock file (package-lock.json or yarn.lock), you can use pnpm import to convert it into a pnpm-lock.yaml file.

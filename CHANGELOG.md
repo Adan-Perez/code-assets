@@ -15,6 +15,12 @@ All notable changes to this project will be documented in this file.
 - Filter resources by tags
 - Toast notifications for actions
 
+## [0.1.1]
+
+- Downgrade to `react 18.3.1` from `react 19.0.0-rc-66855b96-20241106`
+- Downgrade to `react-dom 18.3.1` from `react-dom 19.0.0-rc-66855b96-20241106`
+- Migrated from pnpm to npm
+
 ## Unreleased
 
 - Resource deletion
