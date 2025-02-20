@@ -30,7 +30,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+.env.local
 
 # vercel
 .vercel
@@ -43,3 +43,4 @@ pnpm-lock.yaml
 
 # vscode
 .vscode/*
+todo.md

@@ -2,16 +2,20 @@
 import React, { useState } from 'react';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { AVAILABLE_TAGS } from '@/types';
+import { AVAILABLE_HOOKS } from '@/app/data/hooks';
 import { Link, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { useAuthStore } from '@/store/useAuthStore';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 const fetchMetadata = async (url: string) => {
   try {
     const { data } = await axios.get(`/api/metadata`, { params: { url } });
-
     return data;
   } catch (error) {
     console.error('Error fetching metadata:', error);
@@ -22,6 +26,7 @@ export function ResourceForm() {
   const user = useAuthStore((state) => state.user);
   const [url, setUrl] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (!url) {
@@ -34,28 +39,52 @@ export function ResourceForm() {
       return;
     }
 
+    setIsSubmitting(true);
+
     try {
       const metadata = await fetchMetadata(url);
 
       await addDoc(collection(db, 'resources'), {
-        url: url,
-        tags: selectedTags.map((tag) => tag.toLowerCase()),
+        url,
+        tags: selectedTags,
         createdAt: new Date(),
         updatedAt: new Date(),
-        title: metadata.title,
-        description: metadata.description,
-        favicon: metadata.favicon,
-        baseUrl: metadata.baseUrl,
+        title: metadata?.title || '',
+        description: metadata?.description || '',
+        favicon: metadata?.favicon || '',
+        baseUrl: metadata?.baseUrl || '',
         userId: user?.uid || '',
-        userEmail: user?.email || '',
+        userDisplayName: user?.displayName || 'Unknown User',
       });
+
+      const selectedWebhooks = selectedTags
+        .map((tag) => AVAILABLE_HOOKS[tag])
+        .filter((url) => url);
+
+      const discordPayload = {
+        username: 'Code Assets Bot 🤖',
+        content: `📢 **Nuevo recurso compartido**\n🔗 **URL:** ${url}\n🏷️ **Tags:** ${selectedTags.join(
+          ', '
+        )}\n✍🏻 **Creado por:** ${user?.displayName || 'Misterioso 🥷🏻'}
+        `,
+      };
+
+      await Promise.all(
+        selectedWebhooks.map((webhook) =>
+          axios.post(webhook, discordPayload, {
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+      );
 
       setUrl('');
       setSelectedTags([]);
-      toast.success('Resource saved successfully!');
+      toast.success('Resource saved and shared on Discord!');
     } catch (error) {
       toast.error('Failed to save resource');
-      console.error('Error adding document: ', error);
+      console.error('Error adding document or sending to Discord:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -66,58 +95,52 @@ export function ResourceForm() {
   };
 
   return (
-    <>
-      <div className='space-y-6 bg-white rounded-xl shadow-lg p-6'>
+    <Card className='shadow-lg'>
+      <CardContent className='p-6 space-y-6'>
         <div className='space-y-2'>
-          <label htmlFor='url' className='block text-sm font-medium text-gray-700'>
-            Website URL
-          </label>
+          <Label htmlFor='url'>Website URL</Label>
           <div className='relative'>
             <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
               <Link className='h-5 w-5 text-gray-400' />
             </div>
-            <input
-              type='url'
+            <Input
               id='url'
+              type='url'
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className='block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm'
+              className='pl-10'
               placeholder='https://example.com'
             />
           </div>
         </div>
 
         <div className='space-y-2'>
-          <label className='block text-sm font-medium text-gray-700'>Tags</label>
+          <Label>Tags</Label>
           <div className='flex flex-wrap gap-2'>
-            {AVAILABLE_TAGS.map((tag) => (
-              <button
-                key={tag}
-                type='button'
-                onClick={() => toggleTag(tag)}
-                className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium transition-colors
-                ${
-                  selectedTags.includes(tag)
+            {Object.keys(AVAILABLE_HOOKS).map((name) => (
+              <Badge
+                key={name}
+                onClick={() => toggleTag(name)}
+                className={`cursor-pointer px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  selectedTags.includes(name)
                     ? 'bg-indigo-100 text-indigo-800 hover:bg-indigo-200'
                     : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
                 }`}>
-                {tag}
-                {selectedTags.includes(tag) ? (
+                {name}
+                {selectedTags.includes(name) ? (
                   <X className='ml-1.5 h-3.5 w-3.5' />
                 ) : (
                   <Plus className='ml-1.5 h-3.5 w-3.5' />
                 )}
-              </button>
+              </Badge>
             ))}
           </div>
         </div>
 
-        <button
-          onClick={handleSubmit}
-          className='w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors'>
-          Save Resource
-        </button>
-      </div>
-    </>
+        <Button onClick={handleSubmit} className='w-full' disabled={isSubmitting}>
+          {isSubmitting ? 'Saving & Sending...' : 'Save Resource'}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

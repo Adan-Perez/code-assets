@@ -1,75 +1,91 @@
 'use client';
-
 import { Resource } from '@/types';
 import { ExternalLink, LucideGlobe } from 'lucide-react';
 import React, { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+
+const truncateText = (text: string, maxLength: number) => {
+  return text.length > maxLength ? text.slice(0, maxLength) + '...' : text;
+};
 
 const ResourceCard = ({ resource }: { resource: Resource }) => {
   const [imageError, setImageError] = useState(false);
+  const handleImageError = () => setImageError(true);
 
-  const handleImageError = () => {
-    setImageError(true);
-  };
+  const baseUrl = resource.baseUrl || 'https://example.com';
+  let hostname = 'Unknown';
+  try {
+    hostname = new URL(baseUrl).hostname;
+  } catch (error) {
+    console.error('Invalid URL:', baseUrl);
+  }
+
+  const title = resource.title || hostname;
+  const truncatedTitle = truncateText(title, 80);
+  const truncatedTitleMobile = truncateText(title, 50);
 
   return (
-    <div className='bg-white rounded-lg shadow-md p-6 hover:shadow-xl transition-shadow duration-300 ease-in-out'>
-      <div className='flex items-center gap-3 mb-4'>
-        {resource.favicon && !imageError ? (
-          <img
-            src={resource.favicon}
-            alt='Favicon'
-            className='w-8 h-8 rounded-full object-cover flex-shrink-0'
-            onError={handleImageError}
-          />
-        ) : (
-          <LucideGlobe className='w-8 h-8 text-gray-600 flex-shrink-0' />
-        )}
-        {resource.baseUrl && (
+    <Card className='shadow-md hover:shadow-lg transition-shadow duration-300 ease-in-out'>
+      <CardContent className='p-4 sm:p-6'>
+        <div className='flex items-center gap-3 mb-3 sm:mb-4'>
+          {resource.favicon && !imageError ? (
+            <img
+              src={resource.favicon}
+              alt='Favicon'
+              className='w-8 h-8 rounded-full object-cover flex-shrink-0'
+              onError={handleImageError}
+            />
+          ) : (
+            <LucideGlobe className='w-8 h-8 text-gray-600 flex-shrink-0' />
+          )}
+
           <div className='flex flex-col min-w-0'>
             <a
-              href={resource.baseUrl}
+              href={baseUrl}
               target='_blank'
               rel='noopener noreferrer'
-              className='text-lg font-semibold text-indigo-600 hover:text-indigo-500 truncate'>
-              {resource.title || new URL(resource.baseUrl).hostname}
-              <ExternalLink className='ml-1 inline-block h-4 w-4 flex-shrink-0' />
+              className='text-lg font-semibold text-indigo-600 hover:text-indigo-500 flex items-center max-w-full break-words whitespace-normal sm:line-clamp-2'>
+              <span className='hidden sm:inline'>{truncatedTitle}</span>
+              <span className='sm:hidden'>{truncatedTitleMobile}</span>
+              <ExternalLink className='ml-1 h-4 w-4 flex-shrink-0' />
             </a>
 
             <a
-              href={resource.url}
+              href={resource.url || '#'}
               target='_blank'
               rel='noopener noreferrer'
               className='text-sm text-gray-500 hover:text-gray-700 truncate'>
-              {new URL(resource.url).hostname}
+              {hostname}
             </a>
           </div>
-        )}
-      </div>
-
-      {resource.description && (
-        <p className='text-sm text-gray-700 mb-4'>{resource.description}</p>
-      )}
-
-      <div className='flex flex-wrap gap-2 mb-4'>
-        {resource.tags.map((tag) => (
-          <span
-            key={tag}
-            className='inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800'>
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      <div className='space-y-1 text-xs text-gray-500'>
-        <div>
-          Added by {resource.userEmail?.split('@')[0]} on{' '}
-          {resource.createdAt.toLocaleDateString()}
         </div>
-        {resource.updatedAt && (
-          <div>Updated on {resource.updatedAt.toLocaleDateString()}</div>
+
+        {resource.description && (
+          <p className='text-sm text-gray-700 mb-3 sm:mb-4 line-clamp-3'>
+            {resource.description}
+          </p>
         )}
-      </div>
-    </div>
+
+        <div className='flex flex-wrap gap-2 mb-3 sm:mb-4'>
+          {resource.tags.map((tag) => (
+            <Badge key={tag} variant='outline' className='text-xs'>
+              {tag}
+            </Badge>
+          ))}
+        </div>
+
+        <div className='space-y-1 text-xs text-gray-500'>
+          <div>
+            Added by {resource.userDisplayName || '🥷🏻'} on{' '}
+            {new Date(resource.createdAt).toLocaleDateString()}
+          </div>
+          {resource.updatedAt && (
+            <div>Updated on {new Date(resource.updatedAt).toLocaleDateString()}</div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

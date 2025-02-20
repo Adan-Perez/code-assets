@@ -10,6 +10,7 @@ export interface Resource {
   baseUrl?: string;
   userId: string;
   userEmail: string;
+  userDisplayName: string;
 }
 
 export const AVAILABLE_TAGS = [
